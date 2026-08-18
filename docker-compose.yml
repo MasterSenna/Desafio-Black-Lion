@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: senna-bank-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: senna_bank
+      MYSQL_USER: senna_bank
+      MYSQL_PASSWORD: senna_bank_dev
+      MYSQL_ROOT_PASSWORD: root_dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - senna_bank_mysql:/var/lib/mysql
+
+volumes:
+  senna_bank_mysql:
