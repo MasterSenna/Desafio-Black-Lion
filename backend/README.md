@@ -14,6 +14,24 @@ O backend inicia em `http://localhost:3000` e a documentacao Swagger fica em `ht
 
 O arquivo `.env` deve apontar para um banco MySQL local. Ele e ignorado pelo Git. Em desenvolvimento, `DB_SYNCHRONIZE=true` pode ser usado; em ambientes compartilhados ou produtivos, prefira migrations e `DB_SYNCHRONIZE=false`.
 
+## Migrations
+
+O datasource de migrations fica em `src/database/data-source.ts`. Para conferir migrations pendentes:
+
+```powershell
+npm run migration:show
+```
+
+Para aplicar migrations em um banco novo ou previamente preparado:
+
+```powershell
+$env:DB_SYNCHRONIZE="false"
+$env:DB_RUN_MIGRATIONS="true"
+npm run migration:run
+```
+
+Nao execute a migration inicial diretamente em um banco que ja possui as tabelas `usuarios` e `transacoes` sem fazer primeiro um baseline. Em ambiente de testes, o banco continua sendo `sql.js` em memoria.
+
 ## Modulos
 
 - `autenticacao`: cadastro, login, bcrypt e JWT.
