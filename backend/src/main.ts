@@ -7,6 +7,7 @@ import { CorrelationIdMiddleware } from './comum/middlewares/correlation-id.midd
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
   app.use(new CorrelationIdMiddleware().use);
   app.useGlobalPipes(
     new ValidationPipe({
