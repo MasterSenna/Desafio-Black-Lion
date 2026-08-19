@@ -33,7 +33,7 @@ export class GatewayClient {
       body: JSON.stringify(payload),
     });
 
-    return resposta;
+    return (await resposta.json()) as unknown;
   }
 
   private async autenticar() {

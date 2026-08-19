@@ -20,6 +20,7 @@ export class GatewayController {
   @Post('pix')
   criarPix(@Req() request: RequisicaoAutenticada, @Body() dto: CriarPixDto) {
     return this.gatewayService.criarPagamentoPix({
+      usuarioId: request.user.sub,
       ...dto,
       externalReference: `${request.user.sub}:${dto.externalReference}`,
     });

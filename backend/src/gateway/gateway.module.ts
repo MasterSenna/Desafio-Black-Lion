@@ -7,9 +7,15 @@ import {
   GatewayOnboardingController,
 } from './gateway.controller';
 import { GatewayService } from './gateway.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CheckoutLink } from './checkout-link.entity';
 
 @Module({
-  imports: [ConfigModule, AutenticacaoModule],
+  imports: [
+    ConfigModule,
+    AutenticacaoModule,
+    TypeOrmModule.forFeature([CheckoutLink]),
+  ],
   controllers: [GatewayController, GatewayOnboardingController],
   providers: [GatewayClient, GatewayService],
 })

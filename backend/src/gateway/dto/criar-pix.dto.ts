@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CriarPixDto {
   @IsInt()
@@ -15,5 +22,6 @@ export class CriarPixDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   externalReference: string;
 }
