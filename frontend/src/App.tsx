@@ -245,6 +245,8 @@ function App() {
             <article className="balance-card"><p>Saldo disponível</p><strong>{saldoFormatado}</strong><span>{transacoes.length === 0 ? 'Crie uma transação para atualizar o saldo.' : 'Calculado a partir das suas transações.'}</span></article>
             <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
+          {erro && <p className="feedback error dashboard-feedback">{erro}</p>}
+          {sucesso && <p className="feedback success dashboard-feedback">{sucesso}</p>}
           {mostrarFormularioTransferencia && (
             <form className="transfer-form" onSubmit={transferir}>
               <div className="transfer-form-heading"><div><p className="eyebrow">Nova operação</p><h2>Transferir dinheiro</h2></div><button type="button" onClick={() => setMostrarFormularioTransferencia(false)}>Fechar</button></div>
