@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../comum/guards/jwt-auth.guard';
 import { TransacoesService } from './transacoes.service';
 import { CriarTransacaoDto } from './dto/criar-transacao.dto';
+import { CriarTransferenciaDto } from './dto/criar-transferencia.dto';
 
 type RequisicaoAutenticada = Request & {
   user: { sub: string };
@@ -24,5 +25,13 @@ export class TransacoesController {
   @Post()
   criar(@Req() request: RequisicaoAutenticada, @Body() dto: CriarTransacaoDto) {
     return this.transacoesService.criar(request.user.sub, dto);
+  }
+
+  @Post('transferencias')
+  transferir(
+    @Req() request: RequisicaoAutenticada,
+    @Body() dto: CriarTransferenciaDto,
+  ) {
+    return this.transacoesService.transferir(request.user.sub, dto);
   }
 }

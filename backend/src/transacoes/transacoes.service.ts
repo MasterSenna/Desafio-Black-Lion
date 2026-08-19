@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Transacao } from './transacao.entity';
 import { CriarTransacaoDto } from './dto/criar-transacao.dto';
+import { CriarTransferenciaDto } from './dto/criar-transferencia.dto';
+import { Usuario } from '../usuarios/usuario.entity';
 
 @Injectable()
 export class TransacoesService {
   constructor(
     @InjectRepository(Transacao)
     private readonly transacoesRepository: Repository<Transacao>,
+    @InjectRepository(Usuario)
+    private readonly usuariosRepository: Repository<Usuario>,
+    private readonly dataSource: DataSource,
   ) {}
 
   listarPorUsuario(usuarioId: string) {
@@ -27,5 +37,56 @@ export class TransacoesService {
     });
 
     return this.transacoesRepository.save(transacao);
+  }
+
+  async transferir(usuarioId: string, dto: CriarTransferenciaDto) {
+    const destinatarioEmail = dto.destinatarioEmail.trim().toLowerCase();
+    const destinatario = await this.usuariosRepository.findOne({
+      where: { email: destinatarioEmail },
+    });
+
+    if (!destinatario) {
+      throw new NotFoundException('Destinatário não encontrado');
+    }
+
+    if (destinatario.id === usuarioId) {
+      throw new ConflictException(
+        'Não é possível transferir para a própria conta',
+      );
+    }
+
+    const saldo = await this.transacoesRepository
+      .createQueryBuilder('transacao')
+      .select(
+        `COALESCE(SUM(CASE WHEN transacao.tipo = 'entrada' THEN transacao.valor ELSE -transacao.valor END), 0)`,
+        'saldo',
+      )
+      .where('transacao.usuarioId = :usuarioId', { usuarioId })
+      .getRawOne<{ saldo: string }>();
+    const valor = dto.valor.toFixed(2);
+
+    if (Number(saldo?.saldo ?? 0) < dto.valor) {
+      throw new BadRequestException('Saldo insuficiente');
+    }
+
+    return this.dataSource.transaction(async (entityManager) => {
+      const transacaoSaida = entityManager.create(Transacao, {
+        usuarioId,
+        tipo: 'saida',
+        valor,
+        descricao:
+          dto.descricao?.trim() || `Transferência para ${destinatario.email}`,
+      });
+      const transacaoEntrada = entityManager.create(Transacao, {
+        usuarioId: destinatario.id,
+        tipo: 'entrada',
+        valor,
+        descricao:
+          dto.descricao?.trim() ||
+          `Transferência recebida de ${destinatario.email}`,
+      });
+
+      return entityManager.save([transacaoSaida, transacaoEntrada]);
+    });
   }
 }
