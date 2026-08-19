@@ -5,7 +5,7 @@ import { NextFunction, Request, Response } from 'express';
 export class CorrelationIdMiddleware {
   private readonly logger = new Logger(CorrelationIdMiddleware.name);
 
-  use(request: Request, response: Response, next: NextFunction): void {
+  use = (request: Request, response: Response, next: NextFunction): void => {
     const correlationId = request.header('X-Correlation-Id') ?? randomUUID();
 
     response.setHeader('X-Correlation-Id', correlationId);
@@ -16,5 +16,5 @@ export class CorrelationIdMiddleware {
     });
 
     next();
-  }
+  };
 }
