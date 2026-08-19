@@ -12,35 +12,37 @@ function App() {
     const usuarioSalvo = localStorage.getItem('senna-bank-usuario')
     return usuarioSalvo ? JSON.parse(usuarioSalvo) : null
   })
+  const [modoCadastro, setModoCadastro] = useState(false)
+  const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
 
-  async function entrar(event: FormEvent<HTMLFormElement>) {
+  async function autenticar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setCarregando(true)
     setErro('')
     setSucesso('')
 
     try {
-      const resposta = await fetch('http://localhost:3000/autenticacao/login', {
+      const resposta = await fetch(`http://localhost:3000/autenticacao/${modoCadastro ? 'cadastro' : 'login'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
+        body: JSON.stringify(modoCadastro ? { nome, email, senha } : { email, senha }),
       })
 
       const dados = await resposta.json()
 
       if (!resposta.ok) {
-        throw new Error(dados.message || 'Não foi possível entrar na conta.')
+        throw new Error(dados.message || (modoCadastro ? 'Não foi possível criar a conta.' : 'Não foi possível entrar na conta.'))
       }
 
       localStorage.setItem('senna-bank-token', dados.token)
       localStorage.setItem('senna-bank-usuario', JSON.stringify(dados.usuario))
       setUsuario(dados.usuario)
-      setSucesso(`Bem-vindo, ${dados.usuario.nome}.`)
+      setSucesso(modoCadastro ? 'Conta criada com sucesso.' : `Bem-vindo, ${dados.usuario.nome}.`)
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Erro ao conectar com a API.')
     } finally {
@@ -52,8 +54,16 @@ function App() {
     localStorage.removeItem('senna-bank-token')
     localStorage.removeItem('senna-bank-usuario')
     setUsuario(null)
+    setModoCadastro(false)
+    setNome('')
     setEmail('')
     setSenha('')
+  }
+
+  function alternarModo() {
+    setModoCadastro((modoAtual) => !modoAtual)
+    setErro('')
+    setSucesso('')
   }
 
   if (usuario) {
@@ -89,11 +99,26 @@ function App() {
       <section className="form-panel">
         <div className="form-heading">
           <p className="eyebrow">Acesso à conta</p>
-          <h2>Olá, que bom ver você.</h2>
-          <p>Entre para continuar sua jornada financeira.</p>
+          <h2>{modoCadastro ? 'Crie sua conta Senna.' : 'Olá, que bom ver você.'}</h2>
+          <p>{modoCadastro ? 'Comece sua jornada financeira com a gente.' : 'Entre para continuar sua jornada financeira.'}</p>
         </div>
 
-        <form onSubmit={entrar}>
+        <form onSubmit={autenticar}>
+          {modoCadastro && (
+            <>
+              <label htmlFor="nome">Nome completo</label>
+              <input
+                id="nome"
+                type="text"
+                value={nome}
+                onChange={(event) => setNome(event.target.value)}
+                placeholder="Felipe Senna"
+                autoComplete="name"
+                required
+              />
+            </>
+          )}
+
           <label htmlFor="email">E-mail</label>
           <input
             id="email"
@@ -115,7 +140,7 @@ function App() {
             value={senha}
             onChange={(event) => setSenha(event.target.value)}
             placeholder="Digite sua senha"
-            autoComplete="current-password"
+            autoComplete={modoCadastro ? 'new-password' : 'current-password'}
             required
           />
 
@@ -123,12 +148,15 @@ function App() {
           {sucesso && <p className="feedback success">{sucesso}</p>}
 
           <button className="submit-button" type="submit" disabled={carregando}>
-            {carregando ? 'Entrando...' : 'Entrar'}
+            {carregando ? (modoCadastro ? 'Criando...' : 'Entrando...') : (modoCadastro ? 'Criar conta' : 'Entrar')}
             <span aria-hidden="true">→</span>
           </button>
         </form>
 
-        <p className="form-footer">Ainda não possui uma conta? <button type="button">Criar cadastro</button></p>
+        <p className="form-footer">
+          {modoCadastro ? 'Já possui uma conta?' : 'Ainda não possui uma conta?'}
+          <button type="button" onClick={alternarModo}>{modoCadastro ? 'Entrar' : 'Criar cadastro'}</button>
+        </p>
       </section>
     </main>
   )
