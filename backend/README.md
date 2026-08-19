@@ -53,6 +53,25 @@ Authorization: Bearer SEU_TOKEN
 
 Operacoes de escrita aceitam o header opcional `X-Idempotency-Key` para evitar duplicidade em retries.
 
+## Gateway Pix
+
+O endpoint BaaS protegido abaixo chama o gateway Lera Box somente pelo backend:
+
+- `POST /gateway/pix`
+
+Payload:
+
+```json
+{
+	"amount": 15000,
+	"payerDocument": "12345678901",
+	"description": "Pedido 123",
+	"externalReference": "PEDIDO-123"
+}
+```
+
+`amount` deve ser informado em centavos. Configure `GATEWAY_BASE_URL`, `GATEWAY_DOCUMENT` e `GATEWAY_PASSWORD` no `.env`. O token recebido do gateway permanece somente em memoria no backend e nunca e enviado ao frontend.
+
 ## Testes
 
 ```powershell

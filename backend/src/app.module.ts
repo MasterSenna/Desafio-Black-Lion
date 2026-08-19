@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AutenticacaoModule } from './autenticacao/autenticacao.module';
 import { TransacoesModule } from './transacoes/transacoes.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TransacoesModule } from './transacoes/transacoes.module';
     }),
     AutenticacaoModule,
     TransacoesModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [AppService],
