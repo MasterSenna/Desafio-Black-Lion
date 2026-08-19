@@ -22,6 +22,15 @@ export class Transacao {
   @Column({ type: 'varchar', length: 160, nullable: true })
   descricao: string | null;
 
+  @Column({
+    name: 'idempotencia_key',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+    unique: true,
+  })
+  idempotenciaKey: string | null;
+
   @CreateDateColumn({ name: 'criado_em' })
   criadoEm: Date;
 }

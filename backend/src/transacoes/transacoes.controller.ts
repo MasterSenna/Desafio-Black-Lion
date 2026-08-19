@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../comum/guards/jwt-auth.guard';
@@ -23,15 +31,24 @@ export class TransacoesController {
   }
 
   @Post()
-  criar(@Req() request: RequisicaoAutenticada, @Body() dto: CriarTransacaoDto) {
-    return this.transacoesService.criar(request.user.sub, dto);
+  criar(
+    @Req() request: RequisicaoAutenticada,
+    @Headers('x-idempotency-key') idempotenciaKey: string | undefined,
+    @Body() dto: CriarTransacaoDto,
+  ) {
+    return this.transacoesService.criar(request.user.sub, dto, idempotenciaKey);
   }
 
   @Post('transferencias')
   transferir(
     @Req() request: RequisicaoAutenticada,
+    @Headers('x-idempotency-key') idempotenciaKey: string | undefined,
     @Body() dto: CriarTransferenciaDto,
   ) {
-    return this.transacoesService.transferir(request.user.sub, dto);
+    return this.transacoesService.transferir(
+      request.user.sub,
+      dto,
+      idempotenciaKey,
+    );
   }
 }
