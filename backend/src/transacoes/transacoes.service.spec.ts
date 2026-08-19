@@ -127,3 +127,36 @@ describe('TransacoesService.transferir', () => {
     ]);
   });
 });
+
+describe('TransacoesService.criar', () => {
+  it('rejeita saída acima do saldo disponível', async () => {
+    const { service, transacoesRepository } = criarService();
+    configurarSaldo(transacoesRepository, '9.99');
+
+    await expect(
+      service.criar(usuarioId, {
+        tipo: 'saida',
+        valor: 10,
+        descricao: 'Conta',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(transacoesRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('salva saída dentro do saldo disponível', async () => {
+    const { service, transacoesRepository } = criarService();
+    configurarSaldo(transacoesRepository, '100.00');
+    transacoesRepository.save.mockResolvedValue({ id: 'transacao-1' });
+
+    await expect(
+      service.criar(usuarioId, {
+        tipo: 'saida',
+        valor: 25.5,
+        descricao: 'Conta',
+      }),
+    ).resolves.toEqual({ id: 'transacao-1' });
+    expect(transacoesRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ tipo: 'saida', valor: '25.50' }),
+    );
+  });
+});

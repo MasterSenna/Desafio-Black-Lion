@@ -28,7 +28,15 @@ export class TransacoesService {
     });
   }
 
-  criar(usuarioId: string, dto: CriarTransacaoDto) {
+  async criar(usuarioId: string, dto: CriarTransacaoDto) {
+    if (dto.tipo === 'saida') {
+      const saldo = await this.obterSaldo(usuarioId);
+
+      if (saldo < dto.valor) {
+        throw new BadRequestException('Saldo insuficiente');
+      }
+    }
+
     const transacao = this.transacoesRepository.create({
       usuarioId,
       tipo: dto.tipo,
@@ -37,6 +45,19 @@ export class TransacoesService {
     });
 
     return this.transacoesRepository.save(transacao);
+  }
+
+  private async obterSaldo(usuarioId: string) {
+    const saldo = await this.transacoesRepository
+      .createQueryBuilder('transacao')
+      .select(
+        `COALESCE(SUM(CASE WHEN transacao.tipo = 'entrada' THEN transacao.valor ELSE -transacao.valor END), 0)`,
+        'saldo',
+      )
+      .where('transacao.usuarioId = :usuarioId', { usuarioId })
+      .getRawOne<{ saldo: string }>();
+
+    return Number(saldo?.saldo ?? 0);
   }
 
   async transferir(usuarioId: string, dto: CriarTransferenciaDto) {
@@ -55,17 +76,9 @@ export class TransacoesService {
       );
     }
 
-    const saldo = await this.transacoesRepository
-      .createQueryBuilder('transacao')
-      .select(
-        `COALESCE(SUM(CASE WHEN transacao.tipo = 'entrada' THEN transacao.valor ELSE -transacao.valor END), 0)`,
-        'saldo',
-      )
-      .where('transacao.usuarioId = :usuarioId', { usuarioId })
-      .getRawOne<{ saldo: string }>();
     const valor = dto.valor.toFixed(2);
 
-    if (Number(saldo?.saldo ?? 0) < dto.valor) {
+    if ((await this.obterSaldo(usuarioId)) < dto.valor) {
       throw new BadRequestException('Saldo insuficiente');
     }
 
