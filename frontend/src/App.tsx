@@ -59,6 +59,8 @@ function App() {
     setNome('')
     setEmail('')
     setSenha('')
+    setErro('')
+    setSucesso('')
   }
 
   function alternarModo() {
