@@ -1,10 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 
 type Usuario = {
   nome: string
   email: string
+}
+
+type Transacao = {
+  id: string
+  tipo: 'entrada' | 'saida'
+  valor: string
+  descricao: string | null
+  criadoEm: string
 }
 
 function App() {
@@ -14,6 +22,12 @@ function App() {
   })
   const [modoCadastro, setModoCadastro] = useState(false)
   const [telaCarteira, setTelaCarteira] = useState(false)
+  const [transacoes, setTransacoes] = useState<Transacao[]>([])
+  const [mostrarFormularioTransacao, setMostrarFormularioTransacao] = useState(false)
+  const [tipoTransacao, setTipoTransacao] = useState<'entrada' | 'saida'>('entrada')
+  const [valorTransacao, setValorTransacao] = useState('')
+  const [descricaoTransacao, setDescricaoTransacao] = useState('')
+  const [carregandoTransacoes, setCarregandoTransacoes] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -61,12 +75,78 @@ function App() {
     setSenha('')
     setErro('')
     setSucesso('')
+    setTransacoes([])
+    setMostrarFormularioTransacao(false)
   }
 
   function alternarModo() {
     setModoCadastro((modoAtual) => !modoAtual)
     setErro('')
     setSucesso('')
+  }
+
+  useEffect(() => {
+    if (!usuario) {
+      return
+    }
+
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) {
+      return
+    }
+
+    fetch('http://localhost:3000/transacoes', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (resposta) => {
+        if (!resposta.ok) {
+          throw new Error('Não foi possível carregar as transações.')
+        }
+        return resposta.json() as Promise<Transacao[]>
+      })
+      .then(setTransacoes)
+      .catch(() => setTransacoes([]))
+      .finally(() => setCarregandoTransacoes(false))
+  }, [usuario])
+
+  async function criarTransacao(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+
+    if (!token) {
+      return
+    }
+
+    setCarregandoTransacoes(true)
+
+    try {
+      const resposta = await fetch('http://localhost:3000/transacoes', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: tipoTransacao,
+          valor: Number(valorTransacao),
+          descricao: descricaoTransacao,
+        }),
+      })
+
+      const dados = await resposta.json()
+      if (!resposta.ok) {
+        throw new Error(dados.message || 'Não foi possível criar a transação.')
+      }
+
+      setTransacoes((transacoesAtuais) => [dados, ...transacoesAtuais])
+      setValorTransacao('')
+      setDescricaoTransacao('')
+      setMostrarFormularioTransacao(false)
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível criar a transação.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
   }
 
   if (usuario) {
@@ -81,7 +161,25 @@ function App() {
             <>
               <button className="back-button" type="button" onClick={() => setTelaCarteira(false)}>← Voltar para visão geral</button>
               <div className="dashboard-intro"><p className="eyebrow">Carteira</p><h1>Sua carteira.</h1><p>Organize seus recursos financeiros em um só lugar.</p></div>
-              <section className="wallet-placeholder"><p className="eyebrow">Em preparação</p><h2>Carteira ainda sem movimentações</h2><p>O saldo e as transações aparecerão aqui quando a integração financeira estiver disponível.</p></section>
+              <section className="wallet-placeholder">
+                <div className="wallet-heading"><div><p className="eyebrow">Movimentações</p><h2>Transações da carteira</h2></div><button type="button" onClick={() => setMostrarFormularioTransacao((visivel) => !visivel)}>{mostrarFormularioTransacao ? 'Fechar' : 'Nova transação'}</button></div>
+                {mostrarFormularioTransacao && (
+                  <form className="transaction-form" onSubmit={criarTransacao}>
+                    <label htmlFor="tipo-transacao">Tipo</label>
+                    <select id="tipo-transacao" value={tipoTransacao} onChange={(event) => setTipoTransacao(event.target.value as 'entrada' | 'saida')}>
+                      <option value="entrada">Entrada</option>
+                      <option value="saida">Saída</option>
+                    </select>
+                    <label htmlFor="valor-transacao">Valor</label>
+                    <input id="valor-transacao" type="number" min="0.01" step="0.01" value={valorTransacao} onChange={(event) => setValorTransacao(event.target.value)} required />
+                    <label htmlFor="descricao-transacao">Descrição</label>
+                    <input id="descricao-transacao" type="text" maxLength={160} value={descricaoTransacao} onChange={(event) => setDescricaoTransacao(event.target.value)} placeholder="Ex.: aporte inicial" />
+                    <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Salvando...' : 'Salvar transação'}<span aria-hidden="true">→</span></button>
+                  </form>
+                )}
+                {transacoes.length === 0 && !carregandoTransacoes && <p className="empty-state">Você ainda não possui transações.</p>}
+                {transacoes.length > 0 && <div className="transaction-list">{transacoes.map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || (transacao.tipo === 'entrada' ? 'Entrada' : 'Saída')}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}
+              </section>
             </>
           ) : (
             <>
@@ -90,7 +188,7 @@ function App() {
             <article className="balance-card"><p>Saldo disponível</p><strong>R$ 0,00</strong><span>Dados financeiros serão conectados em breve.</span></article>
             <article className="quick-actions"><p>Atalhos</p><button type="button">Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
-          <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div><p className="empty-state">Você ainda não possui transações.</p></section>
+          <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div>{transacoes.length === 0 ? <p className="empty-state">Você ainda não possui transações.</p> : <div className="transaction-list">{transacoes.slice(0, 3).map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || transacao.tipo}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}</section>
             </>
           )}
         </section>
