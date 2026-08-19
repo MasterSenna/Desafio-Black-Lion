@@ -66,6 +66,7 @@ senna-bank/
 - Transferências atômicas entre usuários.
 - `X-Idempotency-Key` opcional para evitar operações duplicadas.
 - Testes unitários de transferências, saldo e idempotência.
+- Adapter inicial para checkout Pix no gateway Lera Box.
 - Primeiro fluxo de branches e Pull Request concluído.
 
 ## Endpoints atuais
@@ -144,6 +145,10 @@ X-Idempotency-Key: operacao-123
 ```
 
 Uma mesma chave não cria uma segunda operação para o mesmo usuário.
+
+### Gateway Pix
+
+O backend possui `POST /gateway/pix`, que recebe valores em centavos, adiciona a identidade do usuário à `externalReference` e chama o gateway Lera Box com Bearer token mantido somente no backend. A integração usa `https://api.branchpay.com.br/api`; a documentação do gateway fica em `https://api.branchpay.com.br/docs`.
 
 ## Validação
 
