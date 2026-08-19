@@ -28,7 +28,21 @@ export class TransacoesService {
     });
   }
 
-  async criar(usuarioId: string, dto: CriarTransacaoDto) {
+  async criar(
+    usuarioId: string,
+    dto: CriarTransacaoDto,
+    idempotenciaKey?: string,
+  ) {
+    if (idempotenciaKey) {
+      const transacaoExistente = await this.transacoesRepository.findOne({
+        where: { usuarioId, idempotenciaKey },
+      });
+
+      if (transacaoExistente) {
+        return transacaoExistente;
+      }
+    }
+
     if (dto.tipo === 'saida') {
       const saldo = await this.obterSaldo(usuarioId);
 
@@ -42,6 +56,7 @@ export class TransacoesService {
       tipo: dto.tipo,
       valor: dto.valor.toFixed(2),
       descricao: dto.descricao?.trim() || null,
+      idempotenciaKey: idempotenciaKey || null,
     });
 
     return this.transacoesRepository.save(transacao);
@@ -60,7 +75,21 @@ export class TransacoesService {
     return Number(saldo?.saldo ?? 0);
   }
 
-  async transferir(usuarioId: string, dto: CriarTransferenciaDto) {
+  async transferir(
+    usuarioId: string,
+    dto: CriarTransferenciaDto,
+    idempotenciaKey?: string,
+  ) {
+    if (idempotenciaKey) {
+      const transacaoExistente = await this.transacoesRepository.findOne({
+        where: { usuarioId, idempotenciaKey },
+      });
+
+      if (transacaoExistente) {
+        return [transacaoExistente];
+      }
+    }
+
     const destinatarioEmail = dto.destinatarioEmail.trim().toLowerCase();
     const destinatario = await this.usuariosRepository.findOne({
       where: { email: destinatarioEmail },
@@ -89,6 +118,7 @@ export class TransacoesService {
         valor,
         descricao:
           dto.descricao?.trim() || `Transferência para ${destinatario.email}`,
+        idempotenciaKey: idempotenciaKey || null,
       });
       const transacaoEntrada = entityManager.create(Transacao, {
         usuarioId: destinatario.id,
@@ -97,6 +127,7 @@ export class TransacoesService {
         descricao:
           dto.descricao?.trim() ||
           `Transferência recebida de ${destinatario.email}`,
+        idempotenciaKey: null,
       });
 
       return entityManager.save([transacaoSaida, transacaoEntrada]);

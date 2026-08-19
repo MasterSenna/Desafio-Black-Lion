@@ -14,6 +14,7 @@ const destinatario = {
 function criarService() {
   const transacoesRepository = {
     find: jest.fn(),
+    findOne: jest.fn(),
     create: jest.fn((dados: unknown) => dados),
     save: jest.fn(),
     createQueryBuilder: jest.fn(),
@@ -129,6 +130,24 @@ describe('TransacoesService.transferir', () => {
 });
 
 describe('TransacoesService.criar', () => {
+  it('retorna a transação existente para a mesma chave', async () => {
+    const { service, transacoesRepository } = criarService();
+    const transacaoExistente = { id: 'transacao-1' };
+    transacoesRepository.findOne.mockResolvedValue(transacaoExistente);
+
+    await expect(
+      service.criar(
+        usuarioId,
+        {
+          tipo: 'entrada',
+          valor: 10,
+        },
+        'chave-1',
+      ),
+    ).resolves.toBe(transacaoExistente);
+    expect(transacoesRepository.save).not.toHaveBeenCalled();
+  });
+
   it('rejeita saída acima do saldo disponível', async () => {
     const { service, transacoesRepository } = criarService();
     configurarSaldo(transacoesRepository, '9.99');
@@ -158,5 +177,24 @@ describe('TransacoesService.criar', () => {
     expect(transacoesRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ tipo: 'saida', valor: '25.50' }),
     );
+  });
+});
+
+describe('TransacoesService.transferir idempotente', () => {
+  it('não cria um novo débito para a mesma chave', async () => {
+    const { service, transacoesRepository } = criarService();
+    const transacaoExistente = { id: 'debito-1', tipo: 'saida' };
+    transacoesRepository.findOne.mockResolvedValue(transacaoExistente);
+
+    await expect(
+      service.transferir(
+        usuarioId,
+        {
+          destinatarioEmail: destinatario.email,
+          valor: 10,
+        },
+        'chave-transferencia-1',
+      ),
+    ).resolves.toEqual([transacaoExistente]);
   });
 });
