@@ -15,7 +15,7 @@ senna-bank/
 │       ├── autenticacao/    Cadastro e login
 │       ├── usuarios/        Entidade de usuário
 │       └── comum/           Middlewares e recursos compartilhados
-├── frontend/                Aplicação React/Vite
+├── frontend/                Aplicação React/Vite autenticada
 ├── docker-compose.yml       MySQL para ambientes com Docker
 └── README.md                Documentação do projeto
 ```
@@ -36,7 +36,8 @@ senna-bank/
 - React 18 com Vite.
 - ESLint configurado.
 - Estrutura inicial criada e build de produção validado.
-- Integração com a API ainda será implementada.
+- Integração com a API real de autenticação e transações.
+- Dashboard, carteira, saldo, pagamentos e transferências.
 
 ## Funcionalidades concluídas
 
@@ -58,6 +59,13 @@ senna-bank/
 - Validação e transformação dos DTOs.
 - Identificador de correlação nas respostas HTTP.
 - Testes manuais de cadastro e login pelo Swagger.
+- Dashboard autenticado com persistência do JWT no `localStorage`.
+- Consulta e criação de transações autenticadas.
+- Saldo calculado como entradas menos saídas.
+- Pagamentos registrados como saídas com validação de saldo.
+- Transferências atômicas entre usuários.
+- `X-Idempotency-Key` opcional para evitar operações duplicadas.
+- Testes unitários de transferências, saldo e idempotência.
 - Primeiro fluxo de branches e Pull Request concluído.
 
 ## Endpoints atuais
@@ -88,6 +96,73 @@ A resposta contém o token JWT e os dados públicos do usuário.
 ```
 
 A resposta contém um novo token JWT e os dados públicos do usuário.
+
+### Transações
+
+As rotas abaixo exigem o header:
+
+```http
+Authorization: Bearer SEU_TOKEN
+```
+
+Consultar transações:
+
+`GET http://localhost:3000/transacoes`
+
+Criar uma entrada ou saída:
+
+`POST http://localhost:3000/transacoes`
+
+```json
+{
+  "tipo": "entrada",
+  "valor": 100,
+  "descricao": "Aporte inicial"
+}
+```
+
+Para saídas, o backend valida o saldo disponível.
+
+### Transferências
+
+`POST http://localhost:3000/transacoes/transferencias`
+
+```json
+{
+  "destinatarioEmail": "destino@senna.com",
+  "valor": 25.5,
+  "descricao": "Pagamento"
+}
+```
+
+O endpoint grava o débito e o crédito de forma atômica. Transferências para a própria conta, destinatários inexistentes e valores acima do saldo são rejeitados.
+
+Para operações que possam ser repetidas pelo cliente, envie uma chave opcional:
+
+```http
+X-Idempotency-Key: operacao-123
+```
+
+Uma mesma chave não cria uma segunda operação para o mesmo usuário.
+
+## Validação
+
+Backend:
+
+```powershell
+cd backend
+npm run lint
+npm test -- --runInBand
+npm run build
+```
+
+Frontend:
+
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
 
 ## Configuração local
 
