@@ -55,6 +55,12 @@ Operacoes de escrita aceitam o header opcional `X-Idempotency-Key` para evitar d
 
 ## Gateway Pix
 
+Para iniciar o onboarding do gateway, use a rota pública:
+
+- `POST /gateway/conta`
+
+Ela encaminha o cadastro para `POST /api/users`. Use e-mail e telefone reais; o gateway envia documento, senha, `CodigoCliente` e `ChaveLoja` por e-mail.
+
 O endpoint BaaS protegido abaixo chama o gateway Lera Box somente pelo backend:
 
 - `POST /gateway/pix`

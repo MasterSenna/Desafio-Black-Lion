@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../comum/guards/jwt-auth.guard';
 import { CriarPixDto } from './dto/criar-pix.dto';
 import { GatewayService } from './gateway.service';
+import { CriarContaGatewayDto } from './dto/criar-conta-gateway.dto';
 
 type RequisicaoAutenticada = Request & {
   user: { sub: string };
@@ -22,5 +23,16 @@ export class GatewayController {
       ...dto,
       externalReference: `${request.user.sub}:${dto.externalReference}`,
     });
+  }
+}
+
+@ApiTags('gateway')
+@Controller('gateway')
+export class GatewayOnboardingController {
+  constructor(private readonly gatewayService: GatewayService) {}
+
+  @Post('conta')
+  criarConta(@Body() dto: CriarContaGatewayDto) {
+    return this.gatewayService.criarConta(dto);
   }
 }

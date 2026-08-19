@@ -12,6 +12,16 @@ export class GatewayClient {
 
   constructor(private readonly configService: ConfigService) {}
 
+  async criarConta(payload: object) {
+    const resposta = await this.requisitar('/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      autenticar: false,
+    });
+
+    return (await resposta.json()) as unknown;
+  }
+
   async criarPagamentoPix(payload: {
     amount: number;
     payerDocument: string;
