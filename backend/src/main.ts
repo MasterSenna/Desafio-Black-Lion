@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { CorrelationIdMiddleware } from './comum/middlewares/correlation-id.middleware';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.enableCors();
   app.use(new CorrelationIdMiddleware().use);

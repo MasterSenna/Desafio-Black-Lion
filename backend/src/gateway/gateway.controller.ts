@@ -1,4 +1,11 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers as NestHeaders,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../comum/guards/jwt-auth.guard';
@@ -8,6 +15,10 @@ import { CriarContaGatewayDto } from './dto/criar-conta-gateway.dto';
 
 type RequisicaoAutenticada = Request & {
   user: { sub: string };
+};
+
+type RequisicaoWebhook = Request & {
+  rawBody?: Buffer;
 };
 
 @ApiTags('gateway')
@@ -35,5 +46,24 @@ export class GatewayOnboardingController {
   @Post('conta')
   criarConta(@Body() dto: CriarContaGatewayDto) {
     return this.gatewayService.criarConta(dto);
+  }
+}
+
+@ApiTags('webhooks')
+@Controller('webhooks/lera-box')
+export class GatewayWebhookController {
+  constructor(private readonly gatewayService: GatewayService) {}
+
+  @Post('pix')
+  processarPix(
+    @Req() request: RequisicaoWebhook,
+    @NestHeaders('x-lera-box-signature') assinatura: string | undefined,
+    @Body() payload: Record<string, unknown>,
+  ) {
+    return this.gatewayService.processarWebhookPix(
+      assinatura,
+      request.rawBody ?? Buffer.from(JSON.stringify(payload)),
+      payload,
+    );
   }
 }
