@@ -13,6 +13,7 @@ function App() {
     return usuarioSalvo ? JSON.parse(usuarioSalvo) : null
   })
   const [modoCadastro, setModoCadastro] = useState(false)
+  const [telaCarteira, setTelaCarteira] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -74,12 +75,22 @@ function App() {
           <div className="user-actions"><span>{usuario.nome}</span><button type="button" onClick={sair}>Sair</button></div>
         </header>
         <section className="dashboard-content">
-          <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
+          {telaCarteira ? (
+            <>
+              <button className="back-button" type="button" onClick={() => setTelaCarteira(false)}>← Voltar para visão geral</button>
+              <div className="dashboard-intro"><p className="eyebrow">Carteira</p><h1>Sua carteira.</h1><p>Organize seus recursos financeiros em um só lugar.</p></div>
+              <section className="wallet-placeholder"><p className="eyebrow">Em preparação</p><h2>Carteira ainda sem movimentações</h2><p>O saldo e as transações aparecerão aqui quando a integração financeira estiver disponível.</p></section>
+            </>
+          ) : (
+            <>
+              <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
           <div className="balance-grid">
             <article className="balance-card"><p>Saldo disponível</p><strong>R$ 0,00</strong><span>Dados financeiros serão conectados em breve.</span></article>
-            <article className="quick-actions"><p>Atalhos</p><button type="button">Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button">Minha carteira <span>→</span></button></article>
+            <article className="quick-actions"><p>Atalhos</p><button type="button">Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
           <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div><p className="empty-state">Você ainda não possui transações.</p></section>
+            </>
+          )}
         </section>
       </main>
     )
