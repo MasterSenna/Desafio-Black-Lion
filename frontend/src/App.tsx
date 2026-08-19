@@ -9,6 +9,7 @@ type Usuario = {
 
 type Transacao = {
   id: string
+  usuarioId: string
   tipo: 'entrada' | 'saida'
   valor: string
   descricao: string | null
@@ -24,6 +25,10 @@ function App() {
   const [telaCarteira, setTelaCarteira] = useState(false)
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [mostrarFormularioTransacao, setMostrarFormularioTransacao] = useState(false)
+  const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false)
+  const [destinatarioEmail, setDestinatarioEmail] = useState('')
+  const [valorTransferencia, setValorTransferencia] = useState('')
+  const [descricaoTransferencia, setDescricaoTransferencia] = useState('')
   const [tipoTransacao, setTipoTransacao] = useState<'entrada' | 'saida'>('entrada')
   const [valorTransacao, setValorTransacao] = useState('')
   const [descricaoTransacao, setDescricaoTransacao] = useState('')
@@ -77,6 +82,7 @@ function App() {
     setSucesso('')
     setTransacoes([])
     setMostrarFormularioTransacao(false)
+    setMostrarFormularioTransferencia(false)
   }
 
   function alternarModo() {
@@ -148,6 +154,49 @@ function App() {
       setCarregandoTransacoes(false)
     }
   }
+
+  async function transferir(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+
+    if (!token) {
+      return
+    }
+
+    setCarregandoTransacoes(true)
+    setErro('')
+
+    try {
+      const resposta = await fetch('http://localhost:3000/transacoes/transferencias', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          destinatarioEmail,
+          valor: Number(valorTransferencia),
+          descricao: descricaoTransferencia,
+        }),
+      })
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(dados.message || 'Não foi possível realizar a transferência.')
+      }
+
+      setTransacoes((transacoesAtuais) => [dados[0], ...transacoesAtuais])
+      setDestinatarioEmail('')
+      setValorTransferencia('')
+      setDescricaoTransferencia('')
+      setMostrarFormularioTransferencia(false)
+      setSucesso('Transferência realizada com sucesso.')
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível realizar a transferência.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
+  }
   const saldoDisponivel = transacoes.reduce(
     (saldo, transacao) => saldo + (transacao.tipo === 'entrada' ? 1 : -1) * Number(transacao.valor),
     0,
@@ -194,8 +243,20 @@ function App() {
               <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
           <div className="balance-grid">
             <article className="balance-card"><p>Saldo disponível</p><strong>{saldoFormatado}</strong><span>{transacoes.length === 0 ? 'Crie uma transação para atualizar o saldo.' : 'Calculado a partir das suas transações.'}</span></article>
-            <article className="quick-actions"><p>Atalhos</p><button type="button">Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
+            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
+          {mostrarFormularioTransferencia && (
+            <form className="transfer-form" onSubmit={transferir}>
+              <div className="transfer-form-heading"><div><p className="eyebrow">Nova operação</p><h2>Transferir dinheiro</h2></div><button type="button" onClick={() => setMostrarFormularioTransferencia(false)}>Fechar</button></div>
+              <label htmlFor="destinatario-email">E-mail do destinatário</label>
+              <input id="destinatario-email" type="email" value={destinatarioEmail} onChange={(event) => setDestinatarioEmail(event.target.value)} placeholder="destinatario@exemplo.com" required />
+              <label htmlFor="valor-transferencia">Valor</label>
+              <input id="valor-transferencia" type="number" min="0.01" step="0.01" value={valorTransferencia} onChange={(event) => setValorTransferencia(event.target.value)} required />
+              <label htmlFor="descricao-transferencia">Descrição</label>
+              <input id="descricao-transferencia" type="text" maxLength={160} value={descricaoTransferencia} onChange={(event) => setDescricaoTransferencia(event.target.value)} placeholder="Ex.: pagamento" />
+              <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Transferindo...' : 'Confirmar transferência'}<span aria-hidden="true">→</span></button>
+            </form>
+          )}
           <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div>{transacoes.length === 0 ? <p className="empty-state">Você ainda não possui transações.</p> : <div className="transaction-list">{transacoes.slice(0, 3).map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || transacao.tipo}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}</section>
             </>
           )}
