@@ -26,9 +26,12 @@ function App() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [mostrarFormularioTransacao, setMostrarFormularioTransacao] = useState(false)
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false)
+  const [mostrarFormularioPagamento, setMostrarFormularioPagamento] = useState(false)
   const [destinatarioEmail, setDestinatarioEmail] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
   const [descricaoTransferencia, setDescricaoTransferencia] = useState('')
+  const [valorPagamento, setValorPagamento] = useState('')
+  const [descricaoPagamento, setDescricaoPagamento] = useState('')
   const [tipoTransacao, setTipoTransacao] = useState<'entrada' | 'saida'>('entrada')
   const [valorTransacao, setValorTransacao] = useState('')
   const [descricaoTransacao, setDescricaoTransacao] = useState('')
@@ -83,6 +86,7 @@ function App() {
     setTransacoes([])
     setMostrarFormularioTransacao(false)
     setMostrarFormularioTransferencia(false)
+    setMostrarFormularioPagamento(false)
   }
 
   function alternarModo() {
@@ -197,6 +201,49 @@ function App() {
       setCarregandoTransacoes(false)
     }
   }
+
+  async function pagarConta(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+
+    if (!token) {
+      return
+    }
+
+    setCarregandoTransacoes(true)
+    setErro('')
+    setSucesso('')
+
+    try {
+      const resposta = await fetch('http://localhost:3000/transacoes', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: 'saida',
+          valor: Number(valorPagamento),
+          descricao: descricaoPagamento,
+        }),
+      })
+      const dados = await resposta.json()
+
+      if (!resposta.ok) {
+        throw new Error(dados.message || 'Não foi possível registrar o pagamento.')
+      }
+
+      setTransacoes((transacoesAtuais) => [dados, ...transacoesAtuais])
+      setValorPagamento('')
+      setDescricaoPagamento('')
+      setMostrarFormularioPagamento(false)
+      setSucesso('Pagamento registrado com sucesso.')
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível registrar o pagamento.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
+  }
   const saldoDisponivel = transacoes.reduce(
     (saldo, transacao) => saldo + (transacao.tipo === 'entrada' ? 1 : -1) * Number(transacao.valor),
     0,
@@ -243,7 +290,7 @@ function App() {
               <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
           <div className="balance-grid">
             <article className="balance-card"><p>Saldo disponível</p><strong>{saldoFormatado}</strong><span>{transacoes.length === 0 ? 'Crie uma transação para atualizar o saldo.' : 'Calculado a partir das suas transações.'}</span></article>
-            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button">Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
+            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPagamento((visivel) => !visivel)}>Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
           {erro && <p className="feedback error dashboard-feedback">{erro}</p>}
           {sucesso && <p className="feedback success dashboard-feedback">{sucesso}</p>}
@@ -257,6 +304,16 @@ function App() {
               <label htmlFor="descricao-transferencia">Descrição</label>
               <input id="descricao-transferencia" type="text" maxLength={160} value={descricaoTransferencia} onChange={(event) => setDescricaoTransferencia(event.target.value)} placeholder="Ex.: pagamento" />
               <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Transferindo...' : 'Confirmar transferência'}<span aria-hidden="true">→</span></button>
+            </form>
+          )}
+          {mostrarFormularioPagamento && (
+            <form className="transfer-form" onSubmit={pagarConta}>
+              <div className="transfer-form-heading"><div><p className="eyebrow">Nova operação</p><h2>Pagar conta</h2></div><button type="button" onClick={() => setMostrarFormularioPagamento(false)}>Fechar</button></div>
+              <label htmlFor="valor-pagamento">Valor</label>
+              <input id="valor-pagamento" type="number" min="0.01" step="0.01" value={valorPagamento} onChange={(event) => setValorPagamento(event.target.value)} required />
+              <label htmlFor="descricao-pagamento">Descrição da conta</label>
+              <input id="descricao-pagamento" type="text" maxLength={160} value={descricaoPagamento} onChange={(event) => setDescricaoPagamento(event.target.value)} placeholder="Ex.: conta de energia" required />
+              <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Registrando...' : 'Registrar pagamento'}<span aria-hidden="true">→</span></button>
             </form>
           )}
           <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div>{transacoes.length === 0 ? <p className="empty-state">Você ainda não possui transações.</p> : <div className="transaction-list">{transacoes.slice(0, 3).map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || transacao.tipo}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}</section>
