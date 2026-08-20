@@ -16,6 +16,15 @@ type Transacao = {
   criadoEm: string
 }
 
+type CheckoutPix = {
+  status: string
+  amount: number
+  externalReference: string
+  txid: string | null
+  emv: string | null
+  qrCodeBase64: string | null
+}
+
 function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const usuarioSalvo = localStorage.getItem('senna-bank-usuario')
@@ -27,6 +36,12 @@ function App() {
   const [mostrarFormularioTransacao, setMostrarFormularioTransacao] = useState(false)
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false)
   const [mostrarFormularioPagamento, setMostrarFormularioPagamento] = useState(false)
+  const [mostrarFormularioPix, setMostrarFormularioPix] = useState(false)
+  const [checkoutPix, setCheckoutPix] = useState<CheckoutPix | null>(null)
+  const [valorPix, setValorPix] = useState('')
+  const [documentoPix, setDocumentoPix] = useState('')
+  const [descricaoPix, setDescricaoPix] = useState('')
+  const [referenciaPix, setReferenciaPix] = useState('')
   const [destinatarioEmail, setDestinatarioEmail] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
   const [descricaoTransferencia, setDescricaoTransferencia] = useState('')
@@ -87,6 +102,8 @@ function App() {
     setMostrarFormularioTransacao(false)
     setMostrarFormularioTransferencia(false)
     setMostrarFormularioPagamento(false)
+    setMostrarFormularioPix(false)
+    setCheckoutPix(null)
   }
 
   function alternarModo() {
@@ -244,6 +261,43 @@ function App() {
       setCarregandoTransacoes(false)
     }
   }
+
+  async function criarCheckoutPix(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) return
+
+    setCarregandoTransacoes(true)
+    setErro('')
+    setSucesso('')
+
+    try {
+      const resposta = await fetch('http://localhost:3000/gateway/pix', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: Number(valorPix),
+          payerDocument: documentoPix,
+          description: descricaoPix,
+          externalReference: referenciaPix,
+        }),
+      })
+      const dados = await resposta.json()
+      if (!resposta.ok) {
+        throw new Error(dados.message || 'Não foi possível criar o checkout Pix.')
+      }
+
+      setCheckoutPix(dados)
+      setSucesso('Checkout Pix criado com sucesso.')
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível criar o checkout Pix.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
+  }
   const saldoDisponivel = transacoes.reduce(
     (saldo, transacao) => saldo + (transacao.tipo === 'entrada' ? 1 : -1) * Number(transacao.valor),
     0,
@@ -290,7 +344,7 @@ function App() {
               <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
           <div className="balance-grid">
             <article className="balance-card"><p>Saldo disponível</p><strong>{saldoFormatado}</strong><span>{transacoes.length === 0 ? 'Crie uma transação para atualizar o saldo.' : 'Calculado a partir das suas transações.'}</span></article>
-            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPagamento((visivel) => !visivel)}>Pagar conta <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
+            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPagamento((visivel) => !visivel)}>Pagar conta <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPix((visivel) => !visivel)}>Cobrar com Pix <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
           {erro && <p className="feedback error dashboard-feedback">{erro}</p>}
           {sucesso && <p className="feedback success dashboard-feedback">{sucesso}</p>}
@@ -316,6 +370,21 @@ function App() {
               <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Registrando...' : 'Registrar pagamento'}<span aria-hidden="true">→</span></button>
             </form>
           )}
+          {mostrarFormularioPix && (
+            <form className="transfer-form" onSubmit={criarCheckoutPix}>
+              <div className="transfer-form-heading"><div><p className="eyebrow">Gateway Lera Box</p><h2>Cobrar com Pix</h2></div><button type="button" onClick={() => setMostrarFormularioPix(false)}>Fechar</button></div>
+              <label htmlFor="valor-pix">Valor em centavos</label>
+              <input id="valor-pix" type="number" min="1" step="1" value={valorPix} onChange={(event) => setValorPix(event.target.value)} placeholder="15000 = R$ 150,00" required />
+              <label htmlFor="documento-pix">Documento do pagador</label>
+              <input id="documento-pix" type="text" value={documentoPix} onChange={(event) => setDocumentoPix(event.target.value)} required />
+              <label htmlFor="descricao-pix">Descrição</label>
+              <input id="descricao-pix" type="text" value={descricaoPix} onChange={(event) => setDescricaoPix(event.target.value)} placeholder="Pagamento pedido" />
+              <label htmlFor="referencia-pix">Referência externa</label>
+              <input id="referencia-pix" type="text" value={referenciaPix} onChange={(event) => setReferenciaPix(event.target.value)} placeholder="PEDIDO-123" required />
+              <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Gerando...' : 'Gerar QR Code Pix'}<span aria-hidden="true">→</span></button>
+            </form>
+          )}
+          {checkoutPix && <section className="pix-result"><p className="eyebrow">Checkout Pix</p><h2>Status: {checkoutPix.status}</h2>{checkoutPix.qrCodeBase64 && <img src={checkoutPix.qrCodeBase64} alt="QR Code Pix" />}<label htmlFor="pix-emv">Código copia e cola</label><textarea id="pix-emv" readOnly value={checkoutPix.emv ?? ''} /></section>}
           <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div>{transacoes.length === 0 ? <p className="empty-state">Você ainda não possui transações.</p> : <div className="transaction-list">{transacoes.slice(0, 3).map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || transacao.tipo}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}</section>
             </>
           )}
