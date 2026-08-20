@@ -31,6 +31,27 @@ export class GatewayService {
     return this.gatewayClient.criarPagamentoCartao(payload);
   }
 
+  obterWallet() {
+    return this.gatewayClient.obterWallet();
+  }
+
+  listarTransacoesWallet(status?: string, type?: string, limit?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (type) params.set('type', type);
+    if (limit) params.set('limit', limit);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.gatewayClient.listarTransacoesWallet(query);
+  }
+
+  criarSaque(payload: object) {
+    return this.gatewayClient.criarSaque(payload);
+  }
+
+  consultarSaque(id: string) {
+    return this.gatewayClient.consultarSaque(id);
+  }
+
   async criarPagamentoPix(payload: {
     usuarioId: string;
     amount: number;
