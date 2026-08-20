@@ -40,6 +40,13 @@ type GatewayTransaction = {
   createdAt?: string
 }
 
+type SaqueGateway = {
+  id?: string
+  status?: string
+  amount?: number
+  externalReference?: string
+}
+
 function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const usuarioSalvo = localStorage.getItem('senna-bank-usuario')
@@ -60,6 +67,7 @@ function App() {
   const [chavePixSaque, setChavePixSaque] = useState('')
   const [documentoSaque, setDocumentoSaque] = useState('')
   const [referenciaSaque, setReferenciaSaque] = useState('')
+  const [saqueGateway, setSaqueGateway] = useState<SaqueGateway | null>(null)
   const [valorPix, setValorPix] = useState('')
   const [documentoPix, setDocumentoPix] = useState('')
   const [descricaoPix, setDescricaoPix] = useState('')
@@ -129,6 +137,7 @@ function App() {
     setWallet(null)
     setTransacoesGateway([])
     setMostrarFormularioSaque(false)
+    setSaqueGateway(null)
   }
 
   function alternarModo() {
@@ -205,6 +214,7 @@ function App() {
       })
       const dados = await resposta.json()
       if (!resposta.ok) throw new Error(dados.message || 'Não foi possível solicitar o saque.')
+      setSaqueGateway(dados as SaqueGateway)
       setMostrarFormularioSaque(false)
       setValorSaque('')
       setChavePixSaque('')
@@ -416,6 +426,7 @@ function App() {
                     <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Solicitando...' : 'Solicitar saque'}<span aria-hidden="true">→</span></button>
                   </form>
                 )}
+                {saqueGateway && <p className="feedback success">Saque {saqueGateway.status || 'criado'}{saqueGateway.id ? ` · ID: ${saqueGateway.id}` : ''}</p>}
                 {mostrarFormularioTransacao && (
                   <form className="transaction-form" onSubmit={criarTransacao}>
                     <label htmlFor="tipo-transacao">Tipo</label>
