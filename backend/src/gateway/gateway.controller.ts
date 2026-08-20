@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers as NestHeaders,
+  Param,
   Post,
   Query,
   Req,
@@ -54,6 +55,30 @@ export class GatewayController {
       ...dto,
       externalReference: `${request.user.sub}:${dto.externalReference}`,
     });
+  }
+
+  @Get('wallet')
+  obterWallet() {
+    return this.gatewayService.obterWallet();
+  }
+
+  @Get('wallet/transactions')
+  listarTransacoesWallet(
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.gatewayService.listarTransacoesWallet(status, type, limit);
+  }
+
+  @Post('withdrawals')
+  criarSaque(@Body() payload: Record<string, unknown>) {
+    return this.gatewayService.criarSaque(payload);
+  }
+
+  @Get('withdrawals/:id')
+  consultarSaque(@Param('id') id: string) {
+    return this.gatewayService.consultarSaque(id);
   }
 }
 
