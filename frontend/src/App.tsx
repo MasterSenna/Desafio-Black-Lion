@@ -25,6 +25,21 @@ type CheckoutPix = {
   qrCodeBase64: string | null
 }
 
+type Wallet = {
+  balance?: number
+  availableBalance?: number
+  amount?: number
+}
+
+type GatewayTransaction = {
+  id?: string
+  type?: string
+  status?: string
+  amount?: number
+  description?: string
+  createdAt?: string
+}
+
 function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const usuarioSalvo = localStorage.getItem('senna-bank-usuario')
@@ -38,6 +53,13 @@ function App() {
   const [mostrarFormularioPagamento, setMostrarFormularioPagamento] = useState(false)
   const [mostrarFormularioPix, setMostrarFormularioPix] = useState(false)
   const [checkoutPix, setCheckoutPix] = useState<CheckoutPix | null>(null)
+  const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [transacoesGateway, setTransacoesGateway] = useState<GatewayTransaction[]>([])
+  const [mostrarFormularioSaque, setMostrarFormularioSaque] = useState(false)
+  const [valorSaque, setValorSaque] = useState('')
+  const [chavePixSaque, setChavePixSaque] = useState('')
+  const [documentoSaque, setDocumentoSaque] = useState('')
+  const [referenciaSaque, setReferenciaSaque] = useState('')
   const [valorPix, setValorPix] = useState('')
   const [documentoPix, setDocumentoPix] = useState('')
   const [descricaoPix, setDescricaoPix] = useState('')
@@ -104,6 +126,9 @@ function App() {
     setMostrarFormularioPagamento(false)
     setMostrarFormularioPix(false)
     setCheckoutPix(null)
+    setWallet(null)
+    setTransacoesGateway([])
+    setMostrarFormularioSaque(false)
   }
 
   function alternarModo() {
@@ -135,6 +160,63 @@ function App() {
       .catch(() => setTransacoes([]))
       .finally(() => setCarregandoTransacoes(false))
   }, [usuario])
+
+  useEffect(() => {
+    if (!usuario || !telaCarteira) return
+
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) return
+    const headers = { Authorization: `Bearer ${token}` }
+
+    Promise.all([
+      fetch('http://localhost:3000/gateway/wallet', { headers }),
+      fetch('http://localhost:3000/gateway/wallet/transactions?limit=20', { headers }),
+    ])
+      .then(async ([walletResponse, transactionsResponse]) => {
+        if (!walletResponse.ok || !transactionsResponse.ok) {
+          throw new Error('Não foi possível carregar a carteira do gateway.')
+        }
+        const walletData = await walletResponse.json() as Wallet
+        const transactionsData = await transactionsResponse.json() as GatewayTransaction[] | { data?: GatewayTransaction[] }
+        setWallet(walletData)
+        setTransacoesGateway(Array.isArray(transactionsData) ? transactionsData : transactionsData.data ?? [])
+      })
+      .catch((error) => setErro(error instanceof Error ? error.message : 'Não foi possível carregar a carteira.'))
+  }, [usuario, telaCarteira])
+
+  async function solicitarSaque(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) return
+
+    setCarregandoTransacoes(true)
+    setErro('')
+    setSucesso('')
+    try {
+      const resposta = await fetch('http://localhost:3000/gateway/withdrawals', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(valorSaque),
+          pixKey: chavePixSaque,
+          document: documentoSaque,
+          externalReference: referenciaSaque,
+        }),
+      })
+      const dados = await resposta.json()
+      if (!resposta.ok) throw new Error(dados.message || 'Não foi possível solicitar o saque.')
+      setMostrarFormularioSaque(false)
+      setValorSaque('')
+      setChavePixSaque('')
+      setDocumentoSaque('')
+      setReferenciaSaque('')
+      setSucesso('Saque solicitado com sucesso.')
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível solicitar o saque.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
+  }
 
   async function criarTransacao(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -320,7 +402,20 @@ function App() {
               <button className="back-button" type="button" onClick={() => setTelaCarteira(false)}>← Voltar para visão geral</button>
               <div className="dashboard-intro"><p className="eyebrow">Carteira</p><h1>Sua carteira.</h1><p>Organize seus recursos financeiros em um só lugar.</p></div>
               <section className="wallet-placeholder">
-                <div className="wallet-heading"><div><p className="eyebrow">Movimentações</p><h2>Transações da carteira</h2></div><button type="button" onClick={() => setMostrarFormularioTransacao((visivel) => !visivel)}>{mostrarFormularioTransacao ? 'Fechar' : 'Nova transação'}</button></div>
+                <div className="wallet-heading"><div><p className="eyebrow">Saldo gateway</p><h2>{((wallet?.availableBalance ?? wallet?.balance ?? wallet?.amount ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h2></div><div><button type="button" onClick={() => setMostrarFormularioSaque((visivel) => !visivel)}>{mostrarFormularioSaque ? 'Fechar saque' : 'Sacar'}</button><button type="button" onClick={() => setMostrarFormularioTransacao((visivel) => !visivel)}>{mostrarFormularioTransacao ? 'Fechar' : 'Nova transação'}</button></div></div>
+                {mostrarFormularioSaque && (
+                  <form className="transaction-form" onSubmit={solicitarSaque}>
+                    <label htmlFor="valor-saque">Valor em centavos</label>
+                    <input id="valor-saque" type="number" min="1" step="1" value={valorSaque} onChange={(event) => setValorSaque(event.target.value)} placeholder="15000 = R$ 150,00" required />
+                    <label htmlFor="chave-pix-saque">Chave Pix</label>
+                    <input id="chave-pix-saque" type="text" value={chavePixSaque} onChange={(event) => setChavePixSaque(event.target.value)} required />
+                    <label htmlFor="documento-saque">Documento</label>
+                    <input id="documento-saque" type="text" value={documentoSaque} onChange={(event) => setDocumentoSaque(event.target.value)} required />
+                    <label htmlFor="referencia-saque">Referência externa</label>
+                    <input id="referencia-saque" type="text" value={referenciaSaque} onChange={(event) => setReferenciaSaque(event.target.value)} required />
+                    <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Solicitando...' : 'Solicitar saque'}<span aria-hidden="true">→</span></button>
+                  </form>
+                )}
                 {mostrarFormularioTransacao && (
                   <form className="transaction-form" onSubmit={criarTransacao}>
                     <label htmlFor="tipo-transacao">Tipo</label>
@@ -337,6 +432,7 @@ function App() {
                 )}
                 {transacoes.length === 0 && !carregandoTransacoes && <p className="empty-state">Você ainda não possui transações.</p>}
                 {transacoes.length > 0 && <div className="transaction-list">{transacoes.map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || (transacao.tipo === 'entrada' ? 'Entrada' : 'Saída')}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}
+                {transacoesGateway.length > 0 && <div className="transaction-list">{transacoesGateway.map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.description || transacao.type || 'Movimentação gateway'}</strong><span>{transacao.status || 'Processando'}</span></div><strong className="amount-out">{((transacao.amount ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></article>)}</div>}
               </section>
             </>
           ) : (
