@@ -36,6 +36,22 @@ export class GatewayClient {
     return (await resposta.json()) as unknown;
   }
 
+  async listarFees(brand?: string) {
+    const caminho = brand
+      ? `/fees?brand=${encodeURIComponent(brand)}`
+      : '/fees';
+    const resposta = await this.requisitar(caminho, { method: 'GET' });
+    return (await resposta.json()) as unknown;
+  }
+
+  async criarPagamentoCartao(payload: object) {
+    const resposta = await this.requisitar('/payments/card', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return (await resposta.json()) as unknown;
+  }
+
   private async autenticar() {
     const resposta = await this.requisitar('/auth/login', {
       method: 'POST',
