@@ -150,6 +150,16 @@ Uma mesma chave não cria uma segunda operação para o mesmo usuário.
 
 O backend possui `POST /gateway/pix`, que recebe valores em centavos, adiciona a identidade do usuário à `externalReference` e chama o gateway Lera Box com Bearer token mantido somente no backend. A integração usa `https://api.branchpay.com.br/api`; a documentação do gateway fica em `https://api.branchpay.com.br/docs`.
 
+Também estão disponíveis, com autenticação JWT:
+
+- `GET /gateway/wallet`: consulta o saldo da carteira do gateway.
+- `GET /gateway/wallet/transactions?status=APPROVED&type=CREDIT&limit=20`: consulta o extrato com filtros opcionais.
+- `POST /gateway/card`: processa pagamentos com cartão e parcelas; valores são enviados em centavos.
+- `POST /gateway/withdrawals`: solicita saque via Pix com valor em centavos, chave Pix, documento e referência externa.
+- `GET /gateway/withdrawals/:id`: consulta o status de um saque.
+
+O frontend apresenta esses fluxos no dashboard, incluindo QR Code Pix, checkout de cartão, saldo da wallet, extrato e retorno do status do saque.
+
 ## Validação
 
 Backend:
