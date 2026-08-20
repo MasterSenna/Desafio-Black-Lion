@@ -16,6 +16,7 @@ import { CriarPixDto } from './dto/criar-pix.dto';
 import { GatewayService } from './gateway.service';
 import { CriarContaGatewayDto } from './dto/criar-conta-gateway.dto';
 import { CriarCartaoDto } from './dto/criar-cartao.dto';
+import { CriarSaqueDto } from './dto/criar-saque.dto';
 
 type RequisicaoAutenticada = Request & {
   user: { sub: string };
@@ -72,8 +73,14 @@ export class GatewayController {
   }
 
   @Post('withdrawals')
-  criarSaque(@Body() payload: Record<string, unknown>) {
-    return this.gatewayService.criarSaque(payload);
+  criarSaque(
+    @Req() request: RequisicaoAutenticada,
+    @Body() dto: CriarSaqueDto,
+  ) {
+    return this.gatewayService.criarSaque({
+      ...dto,
+      externalReference: `${request.user.sub}:${dto.externalReference}`,
+    });
   }
 
   @Get('withdrawals/:id')
