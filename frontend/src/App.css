@@ -25,6 +25,11 @@
 .transfer-form-heading button, .wallet-heading button { padding: 9px 12px; border: 1px solid #d9d8d0; background: transparent; color: #7e6240; font: inherit; font-size: 12px; cursor: pointer; }
 .transfer-form label { margin-top: 20px; }
 .transfer-form input { padding: 11px 0; }
+.pix-result { margin-top: 24px; padding: 28px; border: 1px solid #d9d8d0; background: #fbfaf6; }
+.pix-result h2 { margin: 0; color: #173f3a; font-family: Georgia, serif; font-size: 27px; font-weight: 400; }
+.pix-result img { display: block; width: min(280px, 100%); margin: 24px auto; }
+.pix-result label { margin-top: 18px; }
+.pix-result textarea { width: 100%; min-height: 90px; box-sizing: border-box; padding: 12px; border: 1px solid #d9d8d0; resize: vertical; background: #f4f1eb; color: #27302d; font: inherit; font-size: 12px; }
 .transactions-section { margin-top: 64px; padding-top: 26px; border-top: 1px solid #c9cdc6; }
 .transactions-section h2 { margin: 0; color: #173f3a; font-family: Georgia, serif; font-size: 30px; font-weight: 400; }
 .empty-state { padding: 44px 0; color: #6d7771; font-size: 14px; }
