@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Headers as NestHeaders,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +14,7 @@ import { JwtAuthGuard } from '../comum/guards/jwt-auth.guard';
 import { CriarPixDto } from './dto/criar-pix.dto';
 import { GatewayService } from './gateway.service';
 import { CriarContaGatewayDto } from './dto/criar-conta-gateway.dto';
+import { CriarCartaoDto } from './dto/criar-cartao.dto';
 
 type RequisicaoAutenticada = Request & {
   user: { sub: string };
@@ -32,6 +35,22 @@ export class GatewayController {
   criarPix(@Req() request: RequisicaoAutenticada, @Body() dto: CriarPixDto) {
     return this.gatewayService.criarPagamentoPix({
       usuarioId: request.user.sub,
+      ...dto,
+      externalReference: `${request.user.sub}:${dto.externalReference}`,
+    });
+  }
+
+  @Get('fees')
+  listarFees(@Query('brand') brand?: string) {
+    return this.gatewayService.listarFees(brand);
+  }
+
+  @Post('card')
+  criarCartao(
+    @Req() request: RequisicaoAutenticada,
+    @Body() dto: CriarCartaoDto,
+  ) {
+    return this.gatewayService.criarPagamentoCartao({
       ...dto,
       externalReference: `${request.user.sub}:${dto.externalReference}`,
     });

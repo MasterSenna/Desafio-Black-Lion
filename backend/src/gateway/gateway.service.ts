@@ -23,6 +23,14 @@ export class GatewayService {
     return this.gatewayClient.criarConta(dto);
   }
 
+  listarFees(brand?: string) {
+    return this.gatewayClient.listarFees(brand);
+  }
+
+  criarPagamentoCartao(payload: object) {
+    return this.gatewayClient.criarPagamentoCartao(payload);
+  }
+
   async criarPagamentoPix(payload: {
     usuarioId: string;
     amount: number;
