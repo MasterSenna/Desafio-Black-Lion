@@ -59,6 +59,7 @@ function App() {
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false)
   const [mostrarFormularioPagamento, setMostrarFormularioPagamento] = useState(false)
   const [mostrarFormularioPix, setMostrarFormularioPix] = useState(false)
+  const [mostrarFormularioCartao, setMostrarFormularioCartao] = useState(false)
   const [checkoutPix, setCheckoutPix] = useState<CheckoutPix | null>(null)
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [transacoesGateway, setTransacoesGateway] = useState<GatewayTransaction[]>([])
@@ -72,6 +73,15 @@ function App() {
   const [documentoPix, setDocumentoPix] = useState('')
   const [descricaoPix, setDescricaoPix] = useState('')
   const [referenciaPix, setReferenciaPix] = useState('')
+  const [valorCartao, setValorCartao] = useState('')
+  const [referenciaCartao, setReferenciaCartao] = useState('')
+  const [numeroCartao, setNumeroCartao] = useState('')
+  const [titularCartao, setTitularCartao] = useState('')
+  const [mesValidadeCartao, setMesValidadeCartao] = useState('')
+  const [anoValidadeCartao, setAnoValidadeCartao] = useState('')
+  const [cvvCartao, setCvvCartao] = useState('')
+  const [parcelasCartao, setParcelasCartao] = useState('1')
+  const [resultadoCartao, setResultadoCartao] = useState<{ status?: string; id?: string } | null>(null)
   const [destinatarioEmail, setDestinatarioEmail] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
   const [descricaoTransferencia, setDescricaoTransferencia] = useState('')
@@ -133,7 +143,9 @@ function App() {
     setMostrarFormularioTransferencia(false)
     setMostrarFormularioPagamento(false)
     setMostrarFormularioPix(false)
+    setMostrarFormularioCartao(false)
     setCheckoutPix(null)
+    setResultadoCartao(null)
     setWallet(null)
     setTransacoesGateway([])
     setMostrarFormularioSaque(false)
@@ -390,6 +402,42 @@ function App() {
       setCarregandoTransacoes(false)
     }
   }
+
+  async function pagarComCartao(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) return
+
+    setCarregandoTransacoes(true)
+    setErro('')
+    setSucesso('')
+    try {
+      const resposta = await fetch('http://localhost:3000/gateway/card', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(valorCartao),
+          externalReference: referenciaCartao,
+          cardNumber: numeroCartao,
+          cardHolder: titularCartao,
+          expiryMonth: mesValidadeCartao,
+          expiryYear: anoValidadeCartao,
+          cvv: cvvCartao,
+          installments: Number(parcelasCartao),
+          feePercent: 0,
+        }),
+      })
+      const dados = await resposta.json()
+      if (!resposta.ok) throw new Error(dados.message || 'Não foi possível processar o cartão.')
+      setResultadoCartao(dados)
+      setMostrarFormularioCartao(false)
+      setSucesso('Pagamento com cartão enviado ao gateway.')
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível processar o cartão.')
+    } finally {
+      setCarregandoTransacoes(false)
+    }
+  }
   const saldoDisponivel = transacoes.reduce(
     (saldo, transacao) => saldo + (transacao.tipo === 'entrada' ? 1 : -1) * Number(transacao.valor),
     0,
@@ -451,7 +499,7 @@ function App() {
               <div className="dashboard-intro"><p className="eyebrow">Visão geral</p><h1>Bom dia, {usuario.nome.split(' ')[0]}.</h1><p>Acompanhe sua vida financeira em um só lugar.</p></div>
           <div className="balance-grid">
             <article className="balance-card"><p>Saldo disponível</p><strong>{saldoFormatado}</strong><span>{transacoes.length === 0 ? 'Crie uma transação para atualizar o saldo.' : 'Calculado a partir das suas transações.'}</span></article>
-            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPagamento((visivel) => !visivel)}>Pagar conta <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPix((visivel) => !visivel)}>Cobrar com Pix <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
+            <article className="quick-actions"><p>Atalhos</p><button type="button" onClick={() => setMostrarFormularioTransferencia((visivel) => !visivel)}>Transferir <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPagamento((visivel) => !visivel)}>Pagar conta <span>→</span></button><button type="button" onClick={() => setMostrarFormularioPix((visivel) => !visivel)}>Cobrar com Pix <span>→</span></button><button type="button" onClick={() => setMostrarFormularioCartao((visivel) => !visivel)}>Pagar com cartão <span>→</span></button><button type="button" onClick={() => setTelaCarteira(true)}>Minha carteira <span>→</span></button></article>
           </div>
           {erro && <p className="feedback error dashboard-feedback">{erro}</p>}
           {sucesso && <p className="feedback success dashboard-feedback">{sucesso}</p>}
@@ -491,6 +539,27 @@ function App() {
               <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Gerando...' : 'Gerar QR Code Pix'}<span aria-hidden="true">→</span></button>
             </form>
           )}
+          {mostrarFormularioCartao && (
+            <form className="transfer-form" onSubmit={pagarComCartao}>
+              <div className="transfer-form-heading"><div><p className="eyebrow">Gateway Lera Box</p><h2>Pagar com cartão</h2></div><button type="button" onClick={() => setMostrarFormularioCartao(false)}>Fechar</button></div>
+              <label htmlFor="valor-cartao">Valor em centavos</label>
+              <input id="valor-cartao" type="number" min="1" step="1" value={valorCartao} onChange={(event) => setValorCartao(event.target.value)} required />
+              <label htmlFor="referencia-cartao">Referência externa</label>
+              <input id="referencia-cartao" type="text" value={referenciaCartao} onChange={(event) => setReferenciaCartao(event.target.value)} required />
+              <label htmlFor="numero-cartao">Número do cartão</label>
+              <input id="numero-cartao" type="text" inputMode="numeric" value={numeroCartao} onChange={(event) => setNumeroCartao(event.target.value)} required />
+              <label htmlFor="titular-cartao">Titular</label>
+              <input id="titular-cartao" type="text" value={titularCartao} onChange={(event) => setTitularCartao(event.target.value)} required />
+              <label htmlFor="mes-cartao">Validade (mês/ano)</label>
+              <div><input id="mes-cartao" type="text" inputMode="numeric" value={mesValidadeCartao} onChange={(event) => setMesValidadeCartao(event.target.value)} placeholder="12" required /><input aria-label="Ano de validade" type="text" inputMode="numeric" value={anoValidadeCartao} onChange={(event) => setAnoValidadeCartao(event.target.value)} placeholder="2028" required /></div>
+              <label htmlFor="cvv-cartao">CVV</label>
+              <input id="cvv-cartao" type="password" inputMode="numeric" value={cvvCartao} onChange={(event) => setCvvCartao(event.target.value)} required />
+              <label htmlFor="parcelas-cartao">Parcelas</label>
+              <select id="parcelas-cartao" value={parcelasCartao} onChange={(event) => setParcelasCartao(event.target.value)}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="6">6x</option><option value="12">12x</option></select>
+              <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Processando...' : 'Pagar com cartão'}<span aria-hidden="true">→</span></button>
+            </form>
+          )}
+          {resultadoCartao && <p className="feedback success">Cartão: {resultadoCartao.status || 'processado'}{resultadoCartao.id ? ` · ID: ${resultadoCartao.id}` : ''}</p>}
           {checkoutPix && <section className="pix-result"><p className="eyebrow">Checkout Pix</p><h2>Status: {checkoutPix.status}</h2>{checkoutPix.qrCodeBase64 && <img src={checkoutPix.qrCodeBase64} alt="QR Code Pix" />}<label htmlFor="pix-emv">Código copia e cola</label><textarea id="pix-emv" readOnly value={checkoutPix.emv ?? ''} /></section>}
           <section className="transactions-section"><div><p className="eyebrow">Movimentações</p><h2>Últimas transações</h2></div>{transacoes.length === 0 ? <p className="empty-state">Você ainda não possui transações.</p> : <div className="transaction-list">{transacoes.slice(0, 3).map((transacao) => <article className="transaction-item" key={transacao.id}><div><strong>{transacao.descricao || transacao.tipo}</strong><span>{new Date(transacao.criadoEm).toLocaleDateString('pt-BR')}</span></div><strong className={transacao.tipo === 'entrada' ? 'amount-in' : 'amount-out'}>{transacao.tipo === 'entrada' ? '+' : '-'} R$ {Number(transacao.valor).toFixed(2).replace('.', ',')}</strong></article>)}</div>}</section>
             </>
