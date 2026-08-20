@@ -52,6 +52,34 @@ export class GatewayClient {
     return (await resposta.json()) as unknown;
   }
 
+  async obterWallet() {
+    const resposta = await this.requisitar('/wallet', { method: 'GET' });
+    return (await resposta.json()) as unknown;
+  }
+
+  async listarTransacoesWallet(query: string) {
+    const resposta = await this.requisitar(`/wallet/transactions${query}`, {
+      method: 'GET',
+    });
+    return (await resposta.json()) as unknown;
+  }
+
+  async criarSaque(payload: object) {
+    const resposta = await this.requisitar('/withdrawals', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return (await resposta.json()) as unknown;
+  }
+
+  async consultarSaque(id: string) {
+    const resposta = await this.requisitar(
+      `/withdrawals/${encodeURIComponent(id)}`,
+      { method: 'GET' },
+    );
+    return (await resposta.json()) as unknown;
+  }
+
   private async autenticar() {
     const resposta = await this.requisitar('/auth/login', {
       method: 'POST',
