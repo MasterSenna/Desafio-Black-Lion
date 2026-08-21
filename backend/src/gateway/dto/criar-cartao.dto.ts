@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -10,38 +11,41 @@ import {
 export class CriarCartaoDto {
   @IsInt()
   @Min(1)
-  amount: number;
+  amount!: number;
 
   @IsString()
   @IsNotEmpty()
-  externalReference: string;
+  externalReference!: string;
 
   @IsString()
   @IsNotEmpty()
-  cardNumber: string;
+  cardNumber!: string;
 
   @IsString()
   @IsNotEmpty()
-  cardHolder: string;
+  cardHolder!: string;
 
   @IsString()
   @IsNotEmpty()
-  expiryMonth: string;
+  @Matches(/^(0[1-9]|1[0-2])$/, {
+    message: 'expiryMonth deve estar entre 01 e 12',
+  })
+  expiryMonth!: string;
 
   @IsString()
   @IsNotEmpty()
-  expiryYear: string;
+  expiryYear!: string;
 
   @IsString()
   @IsNotEmpty()
-  cvv: string;
+  cvv!: string;
 
   @IsInt()
   @Min(1)
   @Max(21)
-  installments: number;
+  installments!: number;
 
   @IsNumber()
-  @Min(0)
-  feePercent: number;
+  @Min(0.01)
+  feePercent!: number;
 }

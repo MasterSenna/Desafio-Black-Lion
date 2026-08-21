@@ -12,9 +12,9 @@ export class CriarPixDto {
   @Min(1)
   amount: number;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  payerDocument: string;
+  payerDocument?: string;
 
   @IsOptional()
   @IsString()

@@ -23,17 +23,24 @@ export class AutenticacaoService {
 
   async criarUsuario(dto: CriarUsuarioDto) {
     const email = dto.email.trim().toLowerCase();
+    const cpf = dto.cpf.replace(/\D/g, '');
+
     const usuarioExistente = await this.usuariosRepository.findOne({
-      where: { email },
+      where: [{ email }, { cpf }],
     });
 
     if (usuarioExistente) {
-      throw new ConflictException('E-mail já cadastrado');
+      throw new ConflictException(
+        usuarioExistente.email === email
+          ? 'E-mail já cadastrado'
+          : 'CPF já cadastrado',
+      );
     }
 
     const usuario = this.usuariosRepository.create({
       nome: dto.nome.trim(),
       email,
+      cpf,
       senhaHash: await bcrypt.hash(dto.senha, 12),
     });
     const usuarioSalvo = await this.usuariosRepository.save(usuario);
