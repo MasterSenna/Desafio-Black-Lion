@@ -5,6 +5,7 @@ import './App.css'
 type Usuario = {
   nome: string
   email: string
+  cpf?: string
 }
 
 type Transacao = {
@@ -47,6 +48,12 @@ type SaqueGateway = {
   externalReference?: string
 }
 
+type Fee = {
+  brand?: string
+  installments?: number
+  feePercent?: number
+}
+
 function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const usuarioSalvo = localStorage.getItem('senna-bank-usuario')
@@ -81,6 +88,8 @@ function App() {
   const [anoValidadeCartao, setAnoValidadeCartao] = useState('')
   const [cvvCartao, setCvvCartao] = useState('')
   const [parcelasCartao, setParcelasCartao] = useState('1')
+  const [taxasCartao, setTaxasCartao] = useState<Fee[]>([])
+  const [taxaCartao, setTaxaCartao] = useState(0)
   const [resultadoCartao, setResultadoCartao] = useState<{ status?: string; id?: string } | null>(null)
   const [destinatarioEmail, setDestinatarioEmail] = useState('')
   const [valorTransferencia, setValorTransferencia] = useState('')
@@ -92,6 +101,7 @@ function App() {
   const [descricaoTransacao, setDescricaoTransacao] = useState('')
   const [carregandoTransacoes, setCarregandoTransacoes] = useState(false)
   const [nome, setNome] = useState('')
+  const [cpf, setCpf] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -108,7 +118,7 @@ function App() {
       const resposta = await fetch(`http://localhost:3000/autenticacao/${modoCadastro ? 'cadastro' : 'login'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modoCadastro ? { nome, email, senha } : { email, senha }),
+        body: JSON.stringify(modoCadastro ? { nome, cpf: cpf.replace(/\D/g, ''), email, senha } : { email, senha }),
       })
 
       const dados = await resposta.json()
@@ -134,6 +144,7 @@ function App() {
     setUsuario(null)
     setModoCadastro(false)
     setNome('')
+    setCpf('')
     setEmail('')
     setSenha('')
     setErro('')
@@ -204,6 +215,28 @@ function App() {
       })
       .catch((error) => setErro(error instanceof Error ? error.message : 'Não foi possível carregar a carteira.'))
   }, [usuario, telaCarteira])
+
+  useEffect(() => {
+    if (!usuario || !mostrarFormularioCartao) return
+
+    const token = localStorage.getItem('senna-bank-token')
+    if (!token) return
+
+    fetch('http://localhost:3000/gateway/fees', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (resposta) => {
+        if (!resposta.ok) throw new Error('Não foi possível carregar as taxas do cartão.')
+        return resposta.json() as Promise<{ fees?: Fee[] } | Fee[]>
+      })
+      .then((dados) => {
+        const taxas = Array.isArray(dados) ? dados : dados.fees ?? []
+        setTaxasCartao(taxas)
+        const taxa = taxas.find((item) => item.installments === Number(parcelasCartao))
+        setTaxaCartao(taxa?.feePercent ?? 0)
+      })
+      .catch((error) => setErro(error instanceof Error ? error.message : 'Não foi possível carregar as taxas.'))
+  }, [usuario, mostrarFormularioCartao, parcelasCartao])
 
   async function solicitarSaque(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -424,7 +457,7 @@ function App() {
           expiryYear: anoValidadeCartao,
           cvv: cvvCartao,
           installments: Number(parcelasCartao),
-          feePercent: 0,
+          feePercent: taxaCartao,
         }),
       })
       const dados = await resposta.json()
@@ -555,7 +588,8 @@ function App() {
               <label htmlFor="cvv-cartao">CVV</label>
               <input id="cvv-cartao" type="password" inputMode="numeric" value={cvvCartao} onChange={(event) => setCvvCartao(event.target.value)} required />
               <label htmlFor="parcelas-cartao">Parcelas</label>
-              <select id="parcelas-cartao" value={parcelasCartao} onChange={(event) => setParcelasCartao(event.target.value)}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="6">6x</option><option value="12">12x</option></select>
+              <select id="parcelas-cartao" value={parcelasCartao} onChange={(event) => setParcelasCartao(event.target.value)}>{(taxasCartao.length ? taxasCartao : [{ installments: 1, feePercent: 0 }]).map((taxa) => <option key={taxa.installments} value={taxa.installments}>{taxa.installments}x · {taxa.feePercent?.toFixed(2).replace('.', ',')}%</option>)}</select>
+              <p className="fee-note">Taxa aplicada: {taxaCartao.toFixed(2).replace('.', ',')}%</p>
               <button className="submit-button" type="submit" disabled={carregandoTransacoes}>{carregandoTransacoes ? 'Processando...' : 'Pagar com cartão'}<span aria-hidden="true">→</span></button>
             </form>
           )}
@@ -598,6 +632,18 @@ function App() {
                 onChange={(event) => setNome(event.target.value)}
                 placeholder="Felipe Senna"
                 autoComplete="name"
+                required
+              />
+
+              <label htmlFor="cpf">CPF</label>
+              <input
+                id="cpf"
+                type="text"
+                value={cpf}
+                onChange={(event) => setCpf(event.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="12345678909"
+                inputMode="numeric"
+                maxLength={11}
                 required
               />
             </>

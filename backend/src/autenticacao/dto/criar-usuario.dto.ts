@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class CriarUsuarioDto {
   @IsString()
@@ -7,6 +13,10 @@ export class CriarUsuarioDto {
 
   @IsEmail()
   email: string;
+
+  @IsString()
+  @Matches(/^\d{11}$/)
+  cpf: string;
 
   @IsString()
   @MinLength(8)

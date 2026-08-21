@@ -128,6 +128,13 @@ export class GatewayClient {
     }
 
     if (!resposta.ok) {
+      const corpo = await resposta.text();
+
+      console.error('❌ ERRO GATEWAY EXTERNO');
+      console.error('URL:', `${baseUrl}${caminho}`);
+      console.error('HTTP:', resposta.status);
+      console.error('BODY:', corpo);
+
       throw new ServiceUnavailableException(
         `Gateway respondeu HTTP ${resposta.status}`,
       );
