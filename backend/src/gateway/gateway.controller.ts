@@ -38,7 +38,7 @@ export class GatewayController {
     return this.gatewayService.criarPagamentoPix({
       usuarioId: request.user.sub,
       ...dto,
-      externalReference: `${request.user.sub}:${dto.externalReference}`,
+      externalReference: `${request.user.sub}-${dto.externalReference}`,
     });
   }
 
@@ -53,8 +53,9 @@ export class GatewayController {
     @Body() dto: CriarCartaoDto,
   ) {
     return this.gatewayService.criarPagamentoCartao({
+      usuarioId: request.user.sub,
       ...dto,
-      externalReference: `${request.user.sub}:${dto.externalReference}`,
+      externalReference: `${request.user.sub}-${dto.externalReference}`,
     });
   }
 
@@ -112,6 +113,32 @@ export class GatewayWebhookController {
     @Body() payload: Record<string, unknown>,
   ) {
     return this.gatewayService.processarWebhookPix(
+      assinatura,
+      request.rawBody ?? Buffer.from(JSON.stringify(payload)),
+      payload,
+    );
+  }
+
+  @Post('card')
+  processarCartao(
+    @Req() request: RequisicaoWebhook,
+    @NestHeaders('x-lera-box-signature') assinatura: string | undefined,
+    @Body() payload: Record<string, unknown>,
+  ) {
+    return this.gatewayService.processarWebhookCartao(
+      assinatura,
+      request.rawBody ?? Buffer.from(JSON.stringify(payload)),
+      payload,
+    );
+  }
+
+  @Post('withdrawal')
+  processarSaque(
+    @Req() request: RequisicaoWebhook,
+    @NestHeaders('x-lera-box-signature') assinatura: string | undefined,
+    @Body() payload: Record<string, unknown>,
+  ) {
+    return this.gatewayService.processarWebhookSaque(
       assinatura,
       request.rawBody ?? Buffer.from(JSON.stringify(payload)),
       payload,

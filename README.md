@@ -158,6 +158,14 @@ Também estão disponíveis, com autenticação JWT:
 - `POST /gateway/withdrawals`: solicita saque via Pix com valor em centavos, chave Pix, documento e referência externa.
 - `GET /gateway/withdrawals/:id`: consulta o status de um saque.
 
+Antes de processar um cartão, o frontend consulta `GET /gateway/fees` e envia o `feePercent` correspondente à bandeira e ao número de parcelas. Os callbacks do gateway podem ser cadastrados apontando para:
+
+- `POST /webhooks/lera-box/pix` para `PAYMENT_PIX`.
+- `POST /webhooks/lera-box/card` para `PAYMENT_CARD`.
+- `POST /webhooks/lera-box/withdrawal` para `WITHDRAWAL`.
+
+Os receptores aceitam `X-Lera-Box-Signature` quando `GATEWAY_WEBHOOK_SECRET` está configurado, registram eventos de forma idempotente e atualizam o checkout pela `externalReference`.
+
 O frontend apresenta esses fluxos no dashboard, incluindo QR Code Pix, checkout de cartão, saldo da wallet, extrato e retorno do status do saque.
 
 ## Validação

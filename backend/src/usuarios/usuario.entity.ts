@@ -16,6 +16,15 @@ export class Usuario {
   @Column({ length: 120 })
   nome: string;
 
+  @Column({
+    name: 'cpf',
+    type: 'varchar',
+    length: 11,
+    unique: true,
+    nullable: true,
+  })
+  cpf: string | null;
+
   @Column({ name: 'senha_hash', select: false })
   senhaHash: string;
 
