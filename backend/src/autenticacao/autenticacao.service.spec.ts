@@ -72,4 +72,28 @@ describe('AutenticacaoService', () => {
     const senhaHash = repo.create.mock.calls[0][0].senhaHash;
     expect(await bcrypt.compare('vitoria1234', senhaHash)).toBe(true);
   });
+
+  it('deve aceitar CNPJ no cadastro de pessoa jurídica', async () => {
+    repo.findOne.mockResolvedValue(null);
+    repo.create.mockImplementation((usuario) => usuario);
+    repo.save.mockImplementation(async (usuario) => ({
+      ...usuario,
+      id: 'usuario-pj-1',
+    }));
+
+    await service.criarUsuario({
+      nome: 'Empresa Senna',
+      email: 'empresa@senna.com',
+      senha: 'empresa1234',
+      tipoPessoa: 'PJ',
+      documento: '12345678000199',
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cpf: '12345678000199',
+        nome: 'Empresa Senna',
+      }),
+    );
+  });
 });
