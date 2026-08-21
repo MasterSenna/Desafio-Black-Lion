@@ -1,6 +1,87 @@
 # Senna Bank
 
-Banking as a Service (BaaS) em desenvolvimento, criado com NestJS no backend e React/Vite no frontend.
+Aplicação Banking as a Service (BaaS) com backend NestJS, frontend React/Vite, banco MySQL e integração com o gateway de pagamentos Lera Box.
+
+## Guia rápido para começar
+
+Este passo a passo é para quem está baixando o projeto pela primeira vez.
+
+### Pré-requisitos
+
+- Node.js 20 ou superior, com npm.
+- Docker Desktop, recomendado para subir o MySQL automaticamente.
+- Uma conta no gateway Lera Box para testar Pix, cartão e saques reais.
+
+### 1. Baixar o projeto
+
+```powershell
+git clone https://github.com/MasterSenna/Desafio-Black-Lion.git
+cd Desafio-Black-Lion
+```
+
+### 2. Subir o banco
+
+O Docker Compose deste projeto sobe o MySQL. A API e o frontend são iniciados separadamente com npm.
+
+```powershell
+docker compose up -d mysql
+docker compose ps
+```
+
+### 3. Configurar o backend
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+Abra `backend/.env` e substitua os valores de exemplo:
+
+```env
+GATEWAY_DOCUMENT=seu-documento-do-gateway
+GATEWAY_PASSWORD=sua-senha-do-gateway
+JWT_SECRET=um-segredo-forte-e-privado
+```
+
+Nunca coloque a senha do gateway no frontend ou no Git. O arquivo `backend/.env` é ignorado pelo repositório.
+
+### 4. Iniciar a API
+
+Em um terminal:
+
+```powershell
+cd backend
+npm install
+npm run start:dev
+```
+
+A API ficará em `http://localhost:3000` e o Swagger em `http://localhost:3000/docs`.
+
+### 5. Iniciar o frontend
+
+Abra outro terminal na pasta raiz do projeto:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Abra no navegador a URL informada pelo Vite, normalmente `http://localhost:5173`.
+
+### 6. Primeiro teste
+
+1. Crie uma conta local no frontend.
+2. Faça login.
+3. Crie uma entrada para ter saldo disponível.
+4. Teste transferência, Pix, cartão, carteira e saque.
+
+Para testar o gateway real, os dados de autenticação do gateway precisam estar preenchidos no `backend/.env`.
+
+Para parar o banco:
+
+```powershell
+docker compose down
+```
 
 ## Objetivo
 
@@ -33,7 +114,7 @@ senna-bank/
 
 ### Frontend
 
-- React 18 com Vite.
+- React 19 com Vite.
 - ESLint configurado.
 - Estrutura inicial criada e build de produção validado.
 - Integração com a API real de autenticação e transações.
@@ -84,6 +165,8 @@ senna-bank/
 ```
 
 A resposta contém o token JWT e os dados públicos do usuário.
+
+O cadastro local aceita pessoa física e pessoa jurídica. Para PF, informe um CPF com 11 dígitos; para PJ, informe um CNPJ com 14 dígitos. A API também mantém compatibilidade com o campo antigo `cpf` para integrações já existentes.
 
 ### Login
 

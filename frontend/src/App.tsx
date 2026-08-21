@@ -102,6 +102,7 @@ function App() {
   const [carregandoTransacoes, setCarregandoTransacoes] = useState(false)
   const [nome, setNome] = useState('')
   const [cpf, setCpf] = useState('')
+  const [tipoPessoa, setTipoPessoa] = useState<'PF' | 'PJ'>('PF')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -118,7 +119,7 @@ function App() {
       const resposta = await fetch(`http://localhost:3000/autenticacao/${modoCadastro ? 'cadastro' : 'login'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modoCadastro ? { nome, cpf: cpf.replace(/\D/g, ''), email, senha } : { email, senha }),
+        body: JSON.stringify(modoCadastro ? { nome, tipoPessoa, documento: cpf.replace(/\D/g, ''), email, senha } : { email, senha }),
       })
 
       const dados = await resposta.json()
@@ -145,6 +146,7 @@ function App() {
     setModoCadastro(false)
     setNome('')
     setCpf('')
+    setTipoPessoa('PF')
     setEmail('')
     setSenha('')
     setErro('')
@@ -635,15 +637,21 @@ function App() {
                 required
               />
 
-              <label htmlFor="cpf">CPF</label>
+              <label htmlFor="tipo-pessoa">Tipo de pessoa</label>
+              <select id="tipo-pessoa" value={tipoPessoa} onChange={(event) => setTipoPessoa(event.target.value as 'PF' | 'PJ')}>
+                <option value="PF">Pessoa física (CPF)</option>
+                <option value="PJ">Pessoa jurídica (CNPJ)</option>
+              </select>
+
+              <label htmlFor="cpf">{tipoPessoa === 'PF' ? 'CPF' : 'CNPJ'}</label>
               <input
                 id="cpf"
                 type="text"
                 value={cpf}
-                onChange={(event) => setCpf(event.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="12345678909"
+                onChange={(event) => setCpf(event.target.value.replace(/\D/g, '').slice(0, tipoPessoa === 'PF' ? 11 : 14))}
+                placeholder={tipoPessoa === 'PF' ? '12345678909' : '12345678000199'}
                 inputMode="numeric"
-                maxLength={11}
+                maxLength={tipoPessoa === 'PF' ? 11 : 14}
                 required
               />
             </>
