@@ -11,12 +11,13 @@ import { GatewayService } from './gateway.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CheckoutLink } from './checkout-link.entity';
 import { WebhookEvent } from './webhook-event.entity';
+import { Usuario } from '../usuarios/usuario.entity';
 
 @Module({
   imports: [
     ConfigModule,
     AutenticacaoModule,
-    TypeOrmModule.forFeature([CheckoutLink, WebhookEvent]),
+    TypeOrmModule.forFeature([Usuario, CheckoutLink, WebhookEvent]),
   ],
   controllers: [
     GatewayController,
