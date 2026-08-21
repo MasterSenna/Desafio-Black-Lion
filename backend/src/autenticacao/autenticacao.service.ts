@@ -23,24 +23,28 @@ export class AutenticacaoService {
 
   async criarUsuario(dto: CriarUsuarioDto) {
     const email = dto.email.trim().toLowerCase();
-    const cpf = dto.cpf.replace(/\D/g, '');
+    const documento = (dto.documento ?? dto.cpf ?? '').replace(/\D/g, '');
+
+    if (!/^\d{11}$|^\d{14}$/.test(documento)) {
+      throw new ConflictException('Informe um CPF ou CNPJ válido');
+    }
 
     const usuarioExistente = await this.usuariosRepository.findOne({
-      where: [{ email }, { cpf }],
+      where: [{ email }, { cpf: documento }],
     });
 
     if (usuarioExistente) {
       throw new ConflictException(
         usuarioExistente.email === email
           ? 'E-mail já cadastrado'
-          : 'CPF já cadastrado',
+          : 'CPF ou CNPJ já cadastrado',
       );
     }
 
     const usuario = this.usuariosRepository.create({
       nome: dto.nome.trim(),
       email,
-      cpf,
+      cpf: documento,
       senhaHash: await bcrypt.hash(dto.senha, 12),
     });
     const usuarioSalvo = await this.usuariosRepository.save(usuario);

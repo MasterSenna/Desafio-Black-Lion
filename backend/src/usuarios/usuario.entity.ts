@@ -19,7 +19,7 @@ export class Usuario {
   @Column({
     name: 'cpf',
     type: 'varchar',
-    length: 11,
+    length: 14,
     unique: true,
     nullable: true,
   })
